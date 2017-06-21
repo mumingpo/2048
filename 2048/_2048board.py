@@ -74,25 +74,28 @@ class Game(object):
     def makemove(self, direction = None, disp = True):
         if direction is None:
             k = ord(keyin())
-            while k != 224:
+            while k != 224:                                                 ##for arrow keys, msvcrt.getch() work by returning 224 on first call, and then 72/75/77/80 on second call
                 k = ord(keyin())
             k = ord(keyin())
             direction = {72: 'up', 80: 'down', 75: 'left', 77: 'right'}.get(k, 'chicken')
-        newboard = self.rotateboard(self.board, direction)
-        moved = False
-        newnewboard = []
+        newboard = self.rotateboard(self.board, direction)                  ##rotate board such that it is always merging right
+        moved = False                                                       ##some events only happen when a valid move is made
+        newnewboard = []                                                    ##merge rows
         for row in newboard:
             newrow = self.merge(row)
             if newrow:
                 newnewboard.append(newrow)
                 moved = True
             else: newnewboard.append(row)
-        self.board = self.rotateboardback(newnewboard, direction)
-        self.availlocs = list(self.availloc())
-        if moved: self.addpatl()
+        self.board = self.rotateboardback(newnewboard, direction)           ##rotate back
+        if moved:
+            self.availlocs = list(self.availloc())
+            self.addpatl()                                                  ##add a random piece
+            self.availlocs = list(self.availloc())
         if disp:
             os.system('cls')
             self.disp()
+        return self.checkdeadlock()
 
     def availloc(self):
         for row in range(4):
@@ -101,15 +104,15 @@ class Game(object):
                     yield row, col
 
     def checkdeadlock(self):
-        if len(self.availlocs) == 0:
+        if len(self.availlocs) == 0:                                        ##less expensive check first
             for direction in ['up', 'down', 'left', 'right']:
                 newboard = self.rotateboard(self.board, direction)
                 for row in newboard:
-                    if self.merge(row): return False
+                    if self.merge(row): return False                        ##if any merge is available, return False
             return True
         else: return False
 
-    def __init__(self, board = None):
+    def __init__(self, board = None, disp = True):
         if board is None:
             self.board = [[0] * 4 for i in range(4)]
             self.availlocs = list(self.availloc())
@@ -120,7 +123,7 @@ class Game(object):
         else:
             self.board = [[loc for loc in row] for row in board]
             self.availlocs = list(self.availloc())
-        self.disp()
+        if disp: self.disp()
 
     def __str__(self):
         s = ''
@@ -136,5 +139,7 @@ class Game(object):
         print(str(self))
 
     def run(self, disp = True):
-        while self.checkdeadlock() is False:
-            self.makemove(disp = disp)
+        deadlock = self.makemove(disp = disp)
+        while deadlock is False:
+            deadlock = self.makemove(disp = disp)
+        print('You lost.')
